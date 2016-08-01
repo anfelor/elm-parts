@@ -1,38 +1,33 @@
-
-import Counters
 import Html exposing (Html, button, div, text)
 import Html.App as App
 import Html.Events exposing (onClick)
+
+import Counters exposing (Counters)
 
 
 main : Program Never
 main =
   App.program
-    { init = init 0 0 
+    { init = init
+    , subscriptions = always Sub.none
     , update = update
     , view = view
-    , subscriptions = always Sub.none
     }
-
 
 
 -- MODEL
 
 
 type alias Model =
-  { topCounter : Counters.Model
-  , bottomCounter : Counters.Model
+  { counters : Counters
   }
 
 
-init : Int -> Int -> (Model, Cmd Msg)
-init top bottom =
-  ( { topCounter = Counters.init top
-    , bottomCounter = Counters.init bottom
-    }
-  , Cmd.none 
+init : (Model, Cmd Msg)
+init =
+  ( { counters = .empty Counters.all }
+  , Cmd.none
   )
-
 
 
 -- UPDATE
@@ -40,33 +35,17 @@ init top bottom =
 
 type Msg
   = Reset
-  | Top Counters.Msg
-  | Bottom Counters.Msg
+  | CounterMsg (Counters.Msg, Counters.ID)
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
-update message model =
-  case message of
+update msg model =
+  case msg of
     Reset ->
-      init 0 0
+      init
 
-    Top msg ->
-      let 
-        (counter', cmd) = 
-          Counters.update msg model.topCounter 
-      in
-        ( { model | topCounter = counter' }
-        , Cmd.map Top cmd
-        )
-
-    Bottom msg ->
-      let 
-        (counter', cmd) = 
-          Counters.update msg model.bottomCounter
-      in
-        ( { model | bottomCounter = counter' }
-        , Cmd.map Bottom cmd
-        )
+    CounterMsg msg' -> 
+      Counters.pass CounterMsg msg' model
 
 
 -- VIEW
@@ -76,7 +55,7 @@ view : Model -> Html Msg
 view model =
   div
     []
-    [ App.map Top (Counters.view model.topCounter)
-    , App.map Bottom (Counters.view model.bottomCounter)
+    [ Counters.render CounterMsg [0] model
+    , Counters.render CounterMsg [1] model
     , button [ onClick Reset ] [ text "RESET" ]
     ]

@@ -1,4 +1,4 @@
-module Counters exposing (..)
+module Counters exposing (Counters, counters, ID, Msg(..))
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -7,19 +7,13 @@ import Html.Events exposing (onClick)
 import Parts exposing (..)
 
 
--- MODEL
 
-
-type alias Model 
-  = Int
+type alias Model = Int
 
 
 init : Int -> Model
-init count =
+init count = 
   count
-
-
--- UPDATE
 
 
 type Msg
@@ -35,9 +29,6 @@ update msg model =
 
     Decrement ->
       (model - 1, Cmd.none)
-
-
--- VIEW
 
 
 view : Model -> Html Msg
@@ -61,38 +52,13 @@ countStyle =
     ]
 
 
--- Parts
-
 type alias ID =
   Index
 
 type alias Counters = 
   Indexed Model
 
-type alias Container c = 
-  { c | counters : Counters }
-
-pass 
-   : ((Msg, Index) -> outerMsg)
-  -> (Msg, Index)
-  -> Container c
-  -> (Container c, Cmd outerMsg)
-pass =
-  apply update find
-
-render 
-   : ((Msg, Index) -> outerMsg) 
-  -> Index
-  -> Container c
-  -> Html outerMsg
-render =
-  create view find
-
-all : Collection Model (Container c)
-all = 
-  collection .counters (\container collection -> 
-                         { container | counters = collection }) 
-
-find : Index -> Accessors Model (Container c) 
-find = 
-  accessors all (init 0)
+counters : Factory { c | counters : Counters } Model Msg outerMsg
+counters =
+  makeFactory (init 0) view update .counters 
+    (\container collection -> { container | counters = collection })

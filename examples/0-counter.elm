@@ -1,39 +1,33 @@
-
-import Counters
-import Help
 import Html exposing (Html, button, div, text)
 import Html.App as App
 import Html.Events exposing (onClick)
+
+import Controls exposing (..)
 
 
 main : Program Never
 main =
   App.program
-    { init = init 0 
+    { init = init
+    , subscriptions = always Sub.none
     , update = update
     , view = view
-    , subscriptions = always Sub.none
     }
-
 
 
 -- MODEL
 
 
 type alias Model =
-  { counters : Counters.Model
-  , help : Help.Model
+  { controls : Controls
   }
 
 
-init : Int -> (Model, Cmd Msg)
-init x =
-  ( { counters = Counters.init x 
-    , help = Help.init
-    }
-  , Cmd.none 
+init : (Model, Cmd Msg)
+init =
+  ( { controls = controls.instance.empty }
+  , Cmd.none
   )
-
 
 
 -- UPDATE
@@ -41,33 +35,18 @@ init x =
 
 type Msg
   = Reset
-  | CounterMsg Counters.Msg
-  | HelpMsg Help.Msg
+  | ControlMsg Controls.Msg
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
-update message model =
-  case message of
+update msg model =
+  case msg of
     Reset ->
-      init 0 
+      init
 
-    CounterMsg msg ->
-      let 
-        (counter', cmd) = 
-          Counters.update msg model.counters
-      in
-        ( { model | counters = counter' }
-        , Cmd.map CounterMsg cmd
-        )
-    
-    HelpMsg msg ->
-      let 
-        (help', cmd) = 
-          Help.update msg model.help
-      in
-        ( { model | help = help' }
-        , Cmd.map HelpMsg cmd
-        )
+    ControlMsg msg' ->
+      controls.pass ControlMsg msg' model
+
 
 -- VIEW
 
@@ -76,7 +55,7 @@ view : Model -> Html Msg
 view model =
   div
     []
-    [ App.map CounterMsg (Counters.view model.counters)
+    [ controls.counters.render (ControlMsg << Controls.CounterMsg) [0] model.controls
     , button [ onClick Reset ] [ text "RESET" ]
-    , App.map HelpMsg (Help.view model.help)
+    , controls.help.render (ControlMsg << Controls.HelpMsg) model.controls
     ]

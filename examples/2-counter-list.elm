@@ -1,38 +1,36 @@
-import Counters
-import Html exposing (..)
+import Html exposing (Html, button, div, text)
 import Html.App as App
-import Html.Events exposing (..)
+import Html.Events exposing (onClick)
 
+import Counters exposing (Counters)
 
 
 main : Program Never
 main =
-  App.beginnerProgram
-    { model = init
+  App.program
+    { init = (init, Cmd.none)
+    , subscriptions = always Sub.none
     , update = update
     , view = view
     }
-
 
 
 -- MODEL
 
 
 type alias Model =
-    { counters : List ( ID, Counters.Model )
-    , nextID : ID
-    }
-
-
-type alias ID = Int
+  { counters : Counters
+  , first : Int
+  , last : Int
+  }
 
 
 init : Model
 init =
-  { counters = []
-  , nextID = 0
+  { counters = .empty Counters.all
+  , first = 0
+  , last = -1
   }
-
 
 
 -- UPDATE
@@ -41,36 +39,29 @@ init =
 type Msg
   = Insert
   | Remove
-  | Modify ID Counters.Msg
+  | CounterMsg (Counters.Msg, Counters.ID)
 
 
-update : Msg -> Model -> Model
+reset : Int -> Model -> Model
+reset k model = 
+  .reset (Counters.find [k]) model
+
+
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    Insert ->
-      let
-        newCounter =
-          ( model.nextID, Counters.init 0 )
+    Insert -> 
+      ( { model | last = model.last + 1 } |> reset (model.last + 1)
+      , Cmd.none
+      )
 
-        newCounters =
-          model.counters ++ [ newCounter ]
-      in
-        Model newCounters (model.nextID + 1)
+    Remove -> 
+      ( { model | first = model.first + 1 } |> reset model.first
+      , Cmd.none
+      )
 
-    Remove ->
-      { model | counters = List.drop 1 model.counters }
-
-    Modify id counterMsg ->
-      let
-        updateCounter (counterID, counterModel) =
-          if counterID == id then
-            (counterID, Counters.update counterMsg counterModel |> fst)
-
-          else
-            (counterID, counterModel)
-      in
-        { model | counters = List.map updateCounter model.counters }
-
+    CounterMsg msg' -> 
+      Counters.pass CounterMsg msg' model
 
 
 -- VIEW
@@ -78,7 +69,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-  let
+ let
     remove =
       button [ onClick Remove ] [ text "Remove" ]
 
@@ -86,11 +77,8 @@ view model =
       button [ onClick Insert ] [ text "Add" ]
 
     counters =
-      List.map viewCounter model.counters
+      [model.first .. model.last]
+        |> List.map 
+            (\idx -> Counters.render CounterMsg [idx] model) 
   in
     div [] ([remove, insert] ++ counters)
-
-
-viewCounter : (ID, Counters.Model) -> Html Msg
-viewCounter (id, model) =
-  App.map (Modify id) (Counters.view model)

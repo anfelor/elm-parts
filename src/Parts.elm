@@ -1,8 +1,6 @@
 module Parts exposing 
-  ( Update, View, collection, Collection
-  , Index, Indexed, accessors, Accessors
-  , Update', create, apply, apply'
-  , accessors1, create1, apply1, apply1'
+  ( makeFactory, makeSingleton, Factory, Singleton
+  , newController, Controller, Index, Indexed
   )
 
 {-| 
@@ -354,3 +352,94 @@ map1st f (x,y) = (f x, y)
 
 map2nd : (b -> c) -> (a,b) -> (a,c)
 map2nd f (x,y) = (x, f y)
+
+
+type Component container model msg outerMsg 
+  = S (Singleton container model msg outerMsg)
+  | F (Factory container model msg outerMsg)
+
+
+type alias Factory container model msg outerMsg =
+  { pass : ((msg, Index) -> outerMsg)
+        -> (msg, Index)
+        -> container
+        -> (container, Cmd outerMsg)
+  , render : ((msg, Index) -> outerMsg) 
+        -> Index
+        -> container
+        -> Html outerMsg
+  , all : Collection model container
+  , find : Index -> Accessors model container
+  }
+
+
+type alias Singleton container model msg outerMsg =
+  { pass : (msg -> outerMsg)
+        -> msg
+        -> container
+        -> (container, Cmd outerMsg)
+  , render : (msg -> outerMsg)
+        -> container
+        -> Html outerMsg
+  , instance : Accessors model container 
+  }
+
+
+type alias Controller container model msg outerMsg =
+  { pass : (msg -> outerMsg)
+        -> msg
+        -> container
+        -> (container, Cmd outerMsg)
+  , instance : Accessors model container
+  }
+
+
+makeSingleton
+   : model
+  -> View model msg
+  -> Update model msg
+  -> (container -> model)
+  -> (container -> model -> container)
+  -> Singleton container model msg outerMsg
+makeSingleton model view update get set =
+  let
+    instance = accessors1 get set model
+  in
+    { pass = apply1 update instance
+    , render = create1 view instance
+    , instance = instance
+    }
+
+
+makeFactory
+   : model 
+  -> View model msg 
+  -> Update model msg 
+  -> (container -> (Indexed model))
+  -> (container -> (Indexed model) -> container)
+  -> Factory container model msg outerMsg
+makeFactory model view update get set =
+  let
+    all = collection get set
+    find = accessors all model
+  in
+    { pass = apply update find
+    , render = create view find
+    , find = find
+    , all = all
+    }
+
+
+newController
+   : model
+  -> Update model msg
+  -> (container -> model)
+  -> (container -> model -> container)
+  -> Controller container model msg outerMsg
+newController model update get set =
+  let
+    instance = accessors1 get set model
+  in
+    { pass = apply1 update instance
+    , instance = instance
+    }

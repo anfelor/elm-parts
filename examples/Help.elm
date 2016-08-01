@@ -1,4 +1,4 @@
-module Help exposing (..)
+module Help exposing (Help, help, Msg(..))
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -63,24 +63,6 @@ countStyle =
 type alias Help = 
   Model
 
-type alias Container c = 
-  { c | help : Help }
-
-pass 
-   : (Msg -> outerMsg)
-  -> Msg
-  -> Container c
-  -> (Container c, Cmd outerMsg)
-pass =
-  apply1 update instance
-
-render 
-   : (Msg -> outerMsg)
-  -> Container c
-  -> Html outerMsg
-render =
-  create1 view instance
-
-instance : Accessors Model (Container c) 
-instance =
-  accessors1 .help (\c i -> { c | help = i })  init
+help : Singleton { c | help : Help } Model Msg outerMsg
+help =
+  makeSingleton init view update .help (\c i -> { c | help = i })
